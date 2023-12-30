@@ -1,12 +1,11 @@
 package com.example.zipper;
 
 
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.zip.ZipEntry;
@@ -21,27 +20,23 @@ public class  ZipperService {
     private final byte[]  file2Byte = file2String.getBytes();
     private final byte[]  file3Byte = file3String.getBytes();
 
-    public File convertToFile(byte[] byteArray,String fileName) throws IOException {
-        InputStream inputStream = new ByteArrayInputStream(byteArray);
-        File file = new File(fileName);
-        Files.copy(inputStream,file.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        return file;
-    }
 
-    public byte[] zipper(List<File> filesToBeZipped) throws IOException {
+
+    public byte[] zipper(List<ByteArrayInputStream> filesToBeZipped) throws IOException {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ZipOutputStream zos = new ZipOutputStream(baos);
-            for(File fileToBeZipped : filesToBeZipped){
-                FileInputStream fis = new FileInputStream(fileToBeZipped);
-                zos.putNextEntry(new ZipEntry(fileToBeZipped.getName()));
+            int i=0;
+            for(ByteArrayInputStream inputStream: filesToBeZipped){
+                zos.putNextEntry(new ZipEntry("file"+i));
+                i+=1;
                 int length;
                 byte[] buffer = new byte[1024];
-                while ((length=fis.read(buffer))>0){
+                while ((length=inputStream.read(buffer))>0){
                     zos.write(buffer,0,length);
                 }
                 zos.closeEntry();
-                fis.close();
+                inputStream.close();
             }
             zos.close();
             return baos.toByteArray();
@@ -52,10 +47,10 @@ public class  ZipperService {
     }
 
     public HttpEntity downloadZip() throws IOException {
-        List<File> filesToBeZipped = new ArrayList<>();
-        filesToBeZipped.add(convertToFile(file1Byte,"file1"));
-        filesToBeZipped.add(convertToFile(file2Byte,"file2"));
-        filesToBeZipped.add(convertToFile(file3Byte,"file3"));
+        List<ByteArrayInputStream> filesToBeZipped = new ArrayList<>();
+        filesToBeZipped.add(new ByteArrayInputStream(file1Byte));
+        filesToBeZipped.add(new ByteArrayInputStream(file2Byte));
+        filesToBeZipped.add(new ByteArrayInputStream(file3Byte));
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
         headers.setContentDispositionFormData("attachment","compressed.zip");
